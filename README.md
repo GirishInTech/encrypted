@@ -1,331 +1,643 @@
-# 🎬 Video Hosting Platform with Password Protection
+# 🎥 Encrypted Video Hosting Platform
 
-A secure Django web application for hosting password-protected videos. Admin users can upload videos and set unique passwords for each video, while visitors need to enter the correct password to watch any video.
+<div align="center">
 
-## 🌟 Features
+![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)
+![Google Cloud](https://img.shields.io/badge/Google_Cloud-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
-### Admin Features
-- **Secure Admin Login**: Only staff members can access admin functionality
-- **Video Upload**: Upload videos with custom passwords
-- **Video Management**: Delete videos from the platform
-- **Dashboard**: View all videos with statistics (views, upload date)
-- **Password Protection**: Set unique passwords for each video (stored as hashed values)
+**A secure, cloud-native video hosting platform with end-to-end encryption**
 
-### Visitor Features
-- **Browse Videos**: View all available videos without login
-- **Password-Protected Access**: Enter password to watch specific videos
-- **Secure Streaming**: Session-based authentication prevents URL bypassing
-- **Video Statistics**: View count for each video
+[Features](#-features) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [Deployment](#-deployment) • [Documentation](#-documentation)
 
-### Security Features
-- ✅ **Hashed Passwords**: All video passwords are hashed using Django's password hashers
-- ✅ **Session-Based Access Control**: Videos can only be accessed after password verification
-- ✅ **Protected URLs**: Direct video URLs are protected and cannot be accessed without valid session
-- ✅ **Automatic Session Expiry**: Access sessions expire after 1 hour
-- ✅ **Admin-Only Actions**: Upload and delete operations require staff authentication
+---
+
+</div>
+
+## ✨ Features
+
+<table>
+<tr>
+<td width="50%">
+
+### 🔒 Security First
+- Password-protected video access
+- Encrypted file storage
+- CSRF protection
+- Session management
+- Service account authentication
+
+</td>
+<td width="50%">
+
+### ☁️ Cloud-Native
+- Google Cloud Run deployment
+- Cloud SQL (PostgreSQL)
+- Cloud Storage (GCS)
+- Scalable architecture
+- Production-ready infrastructure
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🎬 Video Management
+- Secure upload & storage
+- Stream-ready playback
+- Metadata management
+- Access control
+- Mobile-optimized player
+
+</td>
+<td width="50%">
+
+### 🚀 DevOps Ready
+- Docker containerization
+- CI/CD compatible
+- Health check endpoints
+- Environment configuration
+- Automated deployments
+
+</td>
+</tr>
+</table>
+
+---
+
+## 📋 Table of Contents
+
+- [Architecture Overview](#-architecture-overview)
+- [Technology Stack](#-technology-stack)
+- [Quick Start](#-quick-start)
+- [Project Structure](#-project-structure)
+- [Local Development](#-local-development)
+- [Docker Setup](#-docker-setup)
+- [Google Cloud Configuration](#-google-cloud-configuration)
+- [Database Setup](#-database-setup)
+- [Storage Configuration](#-storage-configuration)
+- [Cloud Run Deployment](#-cloud-run-deployment)
+- [Testing](#-testing--troubleshooting)
+- [Mobile Optimization](#-mobile-optimization)
+- [Security](#-security-best-practices)
+- [Roadmap](#-roadmap)
+- [Contributing](#-contributing)
+- [License](#-license)
+
+---
+
+## 🏗 Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         User Interface                       │
+│                    (Django Templates + JS)                   │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     Application Layer                        │
+│                   (Django + Gunicorn)                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │   Upload     │  │    Auth      │  │   Playback   │      │
+│  │   Service    │  │   Service    │  │   Service    │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+└──────────────┬────────────────────────────┬─────────────────┘
+               │                            │
+               ▼                            ▼
+┌──────────────────────────┐  ┌──────────────────────────┐
+│     Cloud SQL            │  │   Cloud Storage (GCS)    │
+│   (PostgreSQL)           │  │   (Video Files)          │
+│                          │  │                          │
+│  • Video Metadata        │  │  • Encrypted Videos      │
+│  • User Data             │  │  • Thumbnails            │
+│  • Access Controls       │  │  • Static Assets         │
+└──────────────────────────┘  └──────────────────────────┘
+```
+
+### 🔄 Data Flow
+
+1. **Upload Phase**
+   - User uploads video through Django interface
+   - Backend validates file type and size
+   - Video encrypted and stored in GCS
+   - Metadata saved to Cloud SQL
+
+2. **Access Phase**
+   - User requests video with password
+   - Django validates credentials
+   - Generates signed URL from GCS
+   - Streams video to player
+
+3. **Playback Phase**
+   - Video player loads from GCS
+   - Progress tracked in database
+   - Mobile-optimized delivery
+
+---
+
+## 🛠 Technology Stack
+
+| Category | Technology | Purpose |
+|----------|-----------|---------|
+| **Backend** | Django 4.x | Web framework & API |
+| **Server** | Gunicorn | WSGI HTTP Server |
+| **Database** | PostgreSQL | Relational data storage |
+| **Storage** | Google Cloud Storage | Video file storage |
+| **Container** | Docker | Application containerization |
+| **Cloud Platform** | Google Cloud Run | Serverless deployment |
+| **Cloud Database** | Cloud SQL | Managed PostgreSQL |
+| **Authentication** | Django Auth | User management |
+| **Security** | CSRF Protection | Request validation |
+
+---
+
+## ⚡ Quick Start
+
+### Prerequisites
+
+- Python 3.9+
+- Docker Desktop
+- Google Cloud SDK
+- PostgreSQL (local testing)
+- Git
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/GirishInTech/encrypted.git
+cd encrypted
+
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# Windows PowerShell:
+venv\Scripts\Activate.ps1
+# macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run migrations
+python manage.py migrate
+
+# Create superuser
+python manage.py createsuperuser
+
+# Start development server
+python manage.py runserver
+```
+
+Visit `http://localhost:8000` to see your application running! 🎉
+
+---
 
 ## 📁 Project Structure
 
 ```
-video_hosting/
-├── manage.py
-├── requirements.txt
-├── README.md
-├── .gitignore
-├── db.sqlite3 (created after migrations)
-├── media/ (created automatically)
-│   ├── videos/
-│   └── thumbnails/
-├── video_hosting/
+encrypted/
+│
+├── 📂 video_hosting/              # Main Django project
 │   ├── __init__.py
-│   ├── settings.py
-│   ├── urls.py
-│   ├── wsgi.py
-│   └── asgi.py
-└── videos/
-    ├── __init__.py
-    ├── admin.py
-    ├── apps.py
-    ├── models.py
-    ├── views.py
-    ├── urls.py
-    ├── forms.py
-    ├── migrations/
-    └── templates/
-        └── videos/
-            ├── base.html
-            ├── home.html
-            ├── watch.html
-            ├── enter_password.html
-            ├── view_video.html
-            ├── admin_dashboard.html
-            ├── upload_video.html
-            └── delete_video.html
+│   ├── settings.py               # Core configuration
+│   ├── urls.py                   # URL routing
+│   ├── wsgi.py                   # WSGI entry point
+│   └── check_connections.py      # Health checks
+│
+├── 📂 media/                      # Local media (development)
+├── 📂 staticfiles/                # Collected static files
+│
+├── 📄 Dockerfile                  # Container definition
+├── 📄 docker-compose.yml          # Local Docker setup
+├── 📄 requirements.txt            # Python dependencies
+├── 📄 .env.example                # Environment template
+├── 📄 .gitignore                  # Git exclusions
+├── 📄 manage.py                   # Django CLI
+├── 🔑 key.json                    # GCS service account (gitignored)
+│
+└── 📄 README.md                   # You are here!
 ```
-
-## 🚀 Setup Instructions (PowerShell - Windows 10)
-
-### Step 1: Navigate to Project Directory
-```powershell
-cd "d:\Girish\encrypted hosting\video_hosting"
-```
-
-### Step 2: Create Virtual Environment
-```powershell
-python -m venv venv
-```
-
-### Step 3: Activate Virtual Environment
-```powershell
-.\venv\Scripts\Activate.ps1
-```
-
-**Note**: If you get an execution policy error, run this first:
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-### Step 4: Install Dependencies
-```powershell
-pip install -r requirements.txt
-```
-
-### Step 5: Create Database and Run Migrations
-```powershell
-python manage.py makemigrations
-python manage.py migrate
-```
-
-### Step 6: Create Superuser (Admin Account)
-```powershell
-python manage.py createsuperuser
-```
-
-You'll be prompted to enter:
-- Username (e.g., `admin`)
-- Email (optional, can press Enter to skip)
-- Password (e.g., `admin123`)
-- Password confirmation
-
-### Step 7: Create Media Directories
-```powershell
-New-Item -ItemType Directory -Force -Path "media\videos"
-New-Item -ItemType Directory -Force -Path "media\thumbnails"
-```
-
-### Step 8: Run Development Server
-```powershell
-python manage.py runserver
-```
-
-The application will be available at: **http://127.0.0.1:8000/**
-
-## 📖 Usage Guide
-
-### For Admin Users
-
-#### 1. Login as Admin
-- Navigate to: http://127.0.0.1:8000/admin/
-- Enter your superuser credentials
-
-#### 2. Upload a Video
-**Option A - Via Admin Dashboard:**
-- Go to http://127.0.0.1:8000/admin-dashboard/
-- Click "Upload New Video"
-- Fill in the form:
-  - **Title**: Video name (required)
-  - **Description**: Optional description
-  - **Video File**: Select video file (MP4, WebM, AVI, MOV)
-  - **Thumbnail**: Optional thumbnail image
-  - **Password**: Set password for this video (required)
-  - **Confirm Password**: Confirm the password
-- Click "Upload Video"
-
-**Option B - Via Navigation:**
-- Click "Upload Video" in the navigation bar
-- Follow the same steps as above
-
-#### 3. Manage Videos
-- Go to Admin Dashboard: http://127.0.0.1:8000/admin-dashboard/
-- View all uploaded videos with statistics
-- Click "View" to watch a video (you'll need to enter the password)
-- Click "Delete" to remove a video permanently
-
-#### 4. Delete a Video
-- From Admin Dashboard, click "Delete" button next to any video
-- Confirm deletion on the warning page
-- Video file and all data will be permanently removed
-
-### For Visitors (Public Users)
-
-#### 1. Browse Videos
-- Visit: http://127.0.0.1:8000/watch/
-- See all available videos with titles, descriptions, and view counts
-
-#### 2. Watch a Video
-- Click "Enter Password to Watch" on any video card
-- Enter the password set by admin
-- If correct, you'll be redirected to the video player
-- Video will play in the browser
-- Your access is valid for 1 hour
-
-#### 3. Direct URL Access
-- Even if you copy the video URL and paste it in a new tab
-- You'll still need to enter the password first
-- This ensures security and prevents unauthorized sharing
-
-## 🔐 Security Implementation Details
-
-### Password Hashing
-- Video passwords are hashed using Django's `make_password()` function
-- Uses PBKDF2 algorithm with SHA256 hash
-- Passwords are never stored in plaintext
-
-### Session-Based Access Control
-- When a user enters correct password, a `VideoAccessSession` is created
-- Session links the user's session key with the video
-- Session expires after 1 hour
-- Video streaming endpoint checks for valid session before serving video
-
-### URL Protection
-- Direct access to `/video/<id>/stream/` is blocked without valid session
-- Returns `403 Forbidden` if session is invalid or expired
-- Prevents URL sharing and unauthorized access
-
-### Admin-Only Views
-- Upload and delete views use `@staff_member_required` decorator
-- Automatically redirects non-staff users to login page
-- Only users with `is_staff=True` can access these views
-
-## 🧪 Testing the Application
-
-### Test Scenario 1: Upload and Watch Video
-
-1. **Login as Admin**
-   ```
-   URL: http://127.0.0.1:8000/admin/
-   Username: admin
-   Password: admin123
-   ```
-
-2. **Upload a Test Video**
-   - Go to: http://127.0.0.1:8000/upload/
-   - Title: "Sample Video"
-   - Password: "test123"
-   - Upload a video file from your computer
-   - Submit the form
-
-3. **Watch as Visitor**
-   - Open an incognito/private browser window
-   - Go to: http://127.0.0.1:8000/watch/
-   - Click on "Sample Video"
-   - Enter password: "test123"
-   - Video should play successfully
-
-### Test Scenario 2: Security Verification
-
-1. **Try Direct URL Access**
-   - After watching a video, copy the video stream URL
-   - Open a new incognito window
-   - Paste the URL directly
-   - You should get "Access denied" message
-
-2. **Try Admin Features as Visitor**
-   - In incognito window, try to access: http://127.0.0.1:8000/upload/
-   - You should be redirected to admin login
-
-3. **Test Wrong Password**
-   - Go to a video's password page
-   - Enter incorrect password
-   - Should show "Incorrect password" error
-
-### Test Scenario 3: Delete Video
-
-1. **Login as Admin**
-2. **Go to Admin Dashboard**: http://127.0.0.1:8000/admin-dashboard/
-3. **Click Delete** on any video
-4. **Confirm deletion**
-5. **Verify** video is removed from list and file is deleted
-
-## 🛠️ Troubleshooting
-
-### Issue: "No module named 'videos'"
-**Solution**: Make sure you're in the correct directory and Django app is installed:
-```powershell
-python manage.py migrate
-```
-
-### Issue: "TemplateDoesNotExist"
-**Solution**: Ensure templates are in the correct location:
-```
-videos/templates/videos/*.html
-```
-
-### Issue: "403 Forbidden" when accessing video
-**Solution**: Enter the correct password first. Session may have expired (1-hour limit).
-
-### Issue: Media files not showing
-**Solution**: Ensure `DEBUG = True` in settings.py for local development.
-
-### Issue: Can't activate virtual environment
-**Solution**: Run PowerShell as Administrator and execute:
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-## 📊 Database Models
-
-### Video Model
-- `id`: UUID (primary key)
-- `title`: CharField (max 200 chars)
-- `description`: TextField (optional)
-- `video_file`: FileField (uploads to media/videos/)
-- `thumbnail`: ImageField (optional, uploads to media/thumbnails/)
-- `password_hash`: CharField (128 chars, stores hashed password)
-- `uploaded_at`: DateTimeField (auto-generated)
-- `views`: IntegerField (default 0)
-
-### VideoAccessSession Model
-- `session_key`: CharField (40 chars)
-- `video`: ForeignKey to Video
-- `created_at`: DateTimeField (auto-generated)
-- `expires_at`: DateTimeField (1 hour from creation)
-
-## 🔄 Future Enhancements
-
-- ✨ Google Cloud Storage integration for video hosting
-- ✨ Signed URLs for temporary video access
-- ✨ Video transcoding for multiple resolutions
-- ✨ User accounts with personal video libraries
-- ✨ Video categories and tags
-- ✨ Search and filter functionality
-- ✨ Video analytics and detailed statistics
-- ✨ Bulk video upload
-- ✨ Password strength requirements
-- ✨ Email notifications for video sharing
-
-## 📝 Environment Variables (For Production)
-
-When deploying to production, set these environment variables:
-
-```
-SECRET_KEY=your-secret-key-here
-DEBUG=False
-ALLOWED_HOSTS=your-domain.com,www.your-domain.com
-DATABASE_URL=your-database-url
-```
-
-## 🤝 Support
-
-For issues or questions:
-1. Check the Troubleshooting section
-2. Review Django documentation: https://docs.djangoproject.com/
-3. Check Python version: `python --version` (should be 3.11+)
-
-## 📄 License
-
-This project is for educational and personal use.
 
 ---
 
-**Made with ❤️ using Django 4.2**
+## 💻 Local Development
+
+### 1. Environment Configuration
+
+Create a `.env` file in the project root:
+
+```env
+# Django Settings
+SECRET_KEY=your-secret-key-here
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Database Configuration
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_NAME=video_hosting_db
+DB_USER=postgres
+DB_PASSWORD=your-password
+
+# Google Cloud Storage
+BUCKET_NAME=your-bucket-name
+GOOGLE_APPLICATION_CREDENTIALS=key.json
+
+# Security
+CSRF_TRUSTED_ORIGINS=http://localhost:8000
+```
+
+### 2. Start Cloud SQL Proxy (Optional for local GCP connection)
+
+```bash
+cloud-sql-proxy.x64.exe image-gen-demo-epsilon:asia-south1:video-db \
+  --address 0.0.0.0 \
+  --port 5432
+```
+
+### 3. Run System Health Checks
+
+```bash
+python video_hosting/check_connections.py
+```
+
+Expected output:
+```
+🔍 Running system health checks...
+✅ Database connection successful
+✅ GCS bucket accessible
+✅ All connections OK! You're good to go 🎉
+```
+
+---
+
+## 🐳 Docker Setup
+
+### Build Docker Image
+
+```bash
+docker build -t video-hosting-app:latest .
+```
+
+### Run Container Locally
+
+```bash
+docker run -p 8080:8080 \
+  -v "${PWD}/key.json:/app/key.json" \
+  --env-file .env \
+  video-hosting-app:latest
+```
+
+### Docker Compose (Recommended for Local Development)
+
+```bash
+docker-compose up --build
+```
+
+Access the application at `http://localhost:8080`
+
+---
+
+## ☁️ Google Cloud Configuration
+
+### 1. Enable Required APIs
+
+```bash
+gcloud services enable \
+  run.googleapis.com \
+  sqladmin.googleapis.com \
+  storage.googleapis.com \
+  artifactregistry.googleapis.com
+```
+
+### 2. Create Artifact Registry Repository
+
+```bash
+gcloud artifacts repositories create video-hosting-repo \
+  --repository-format=docker \
+  --location=asia-south1 \
+  --description="Container repository for video hosting application"
+```
+
+### 3. Configure Docker Authentication
+
+```bash
+gcloud auth configure-docker asia-south1-docker.pkg.dev
+```
+
+### 4. Build and Push Image
+
+```bash
+# Tag the image
+docker tag video-hosting-app:latest \
+  asia-south1-docker.pkg.dev/image-gen-demo-epsilon/video-hosting-repo/video-hosting-app:latest
+
+# Push to Artifact Registry
+docker push \
+  asia-south1-docker.pkg.dev/image-gen-demo-epsilon/video-hosting-repo/video-hosting-app:latest
+```
+
+---
+
+## 🗄️ Database Setup
+
+### Cloud SQL Configuration
+
+**Instance Details:**
+- **Instance ID:** `video-db`
+- **Database:** `postgres`
+- **User:** `postgres`
+- **Region:** `asia-south1`
+- **Connection:** Unix socket via Cloud SQL Proxy
+
+### Environment Variables
+
+```env
+DB_HOST=/cloudsql/image-gen-demo-epsilon:asia-south1:video-db
+DB_NAME=postgres
+DB_USER=postgres
+DB_PASSWORD=your-secure-password
+```
+
+### Run Migrations on Cloud SQL
+
+```bash
+# Connect via Cloud SQL Proxy
+cloud-sql-proxy image-gen-demo-epsilon:asia-south1:video-db
+
+# In another terminal
+python manage.py migrate
+python manage.py createsuperuser
+```
+
+---
+
+## 📦 Storage Configuration
+
+### Create GCS Bucket
+
+```bash
+gcloud storage buckets create gs://video-hosting-media-bucket-girish \
+  --location=asia-south1 \
+  --uniform-bucket-level-access
+```
+
+### Create Service Account
+
+```bash
+gcloud iam service-accounts create media-storage-sa \
+  --display-name="Media Storage Service Account"
+```
+
+### Assign Permissions
+
+```bash
+# Storage Admin
+gcloud projects add-iam-policy-binding image-gen-demo-epsilon \
+  --member="serviceAccount:media-storage-sa@image-gen-demo-epsilon.iam.gserviceaccount.com" \
+  --role="roles/storage.objectAdmin"
+
+# Cloud SQL Client
+gcloud projects add-iam-policy-binding image-gen-demo-epsilon \
+  --member="serviceAccount:media-storage-sa@image-gen-demo-epsilon.iam.gserviceaccount.com" \
+  --role="roles/cloudsql.client"
+```
+
+### Generate Service Account Key
+
+```bash
+gcloud iam service-accounts keys create key.json \
+  --iam-account=media-storage-sa@image-gen-demo-epsilon.iam.gserviceaccount.com
+```
+
+> ⚠️ **Security Note:** Never commit `key.json` to version control!
+
+---
+
+## 🚀 Cloud Run Deployment
+
+### Deploy Service
+
+```bash
+gcloud run deploy video-hosting-service \
+  --image=asia-south1-docker.pkg.dev/image-gen-demo-epsilon/video-hosting-repo/video-hosting-app:latest \
+  --region=asia-south1 \
+  --platform=managed \
+  --allow-unauthenticated \
+  --add-cloudsql-instances=image-gen-demo-epsilon:asia-south1:video-db \
+  --service-account=media-storage-sa@image-gen-demo-epsilon.iam.gserviceaccount.com \
+  --set-env-vars="DB_HOST=/cloudsql/image-gen-demo-epsilon:asia-south1:video-db,DB_NAME=postgres,DB_USER=postgres,DB_PASSWORD=your-password,BUCKET_NAME=video-hosting-media-bucket-girish,SECRET_KEY=your-secret-key" \
+  --memory=512Mi \
+  --cpu=1 \
+  --timeout=300 \
+  --max-instances=10
+```
+
+### Update CSRF Settings
+
+After deployment, update `settings.py`:
+
+```python
+CSRF_TRUSTED_ORIGINS = [
+    'https://video-hosting-service-1068891226958.asia-south1.run.app'
+]
+```
+
+Redeploy with the updated settings.
+
+---
+
+## 🧪 Testing & Troubleshooting
+
+### Health Check Endpoint
+
+```bash
+curl https://your-cloud-run-url.run.app/health/
+```
+
+Expected response:
+```json
+{
+  "status": "healthy",
+  "database": "connected",
+  "storage": "accessible"
+}
+```
+
+### Common Issues
+
+<details>
+<summary><b>CSRF Verification Failed</b></summary>
+
+**Solution:** Add your Cloud Run URL to `CSRF_TRUSTED_ORIGINS` in `settings.py`:
+
+```python
+CSRF_TRUSTED_ORIGINS = [
+    'https://your-service-name.run.app'
+]
+```
+</details>
+
+<details>
+<summary><b>Database Connection Error</b></summary>
+
+**Solution:** Verify Cloud SQL connection string and ensure Cloud SQL Admin API is enabled:
+
+```bash
+gcloud services enable sqladmin.googleapis.com
+```
+</details>
+
+<details>
+<summary><b>GCS Upload Failure</b></summary>
+
+**Solution:** Check service account permissions:
+
+```bash
+gcloud storage buckets add-iam-policy-binding gs://your-bucket \
+  --member="serviceAccount:your-sa@project.iam.gserviceaccount.com" \
+  --role="roles/storage.objectAdmin"
+```
+</details>
+
+<details>
+<summary><b>Container Won't Start</b></summary>
+
+**Solution:** Check logs:
+
+```bash
+gcloud run services logs read video-hosting-service \
+  --region=asia-south1 \
+  --limit=50
+```
+</details>
+
+---
+
+## 📱 Mobile Optimization
+
+### Features
+
+- ✅ Fully responsive design
+- ✅ Touch-optimized controls
+- ✅ Adaptive video quality
+- ✅ Lazy loading thumbnails
+- ✅ Swipe gestures
+- ✅ Mobile-first UI
+
+### Testing
+
+```bash
+# Test on various viewports
+python manage.py test --settings=video_hosting.test_settings
+```
+
+---
+
+## 🔒 Security Best Practices
+
+### Implemented
+
+- [x] Password-protected video access
+- [x] CSRF token validation
+- [x] Secure session management
+- [x] Environment variable configuration
+- [x] Service account authentication
+- [x] HTTPS enforcement (Cloud Run)
+- [x] SQL injection protection (Django ORM)
+
+### Recommendations
+
+```python
+# settings.py - Production Security
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+```
+
+---
+
+## 🗺️ Roadmap
+
+### Phase 1: Core Features ✅
+- [x] Video upload & storage
+- [x] Password protection
+- [x] Cloud deployment
+- [x] Mobile optimization
+
+### Phase 2: Enhanced Features 🚧
+- [ ] Video transcoding pipeline (Cloud Functions)
+- [ ] Multi-quality streaming (HLS)
+- [ ] Analytics dashboard
+- [ ] User management system
+
+### Phase 3: Advanced Features 🔮
+- [ ] JWT-based API
+- [ ] CDN integration (Cloud CDN)
+- [ ] Real-time notifications
+- [ ] Advanced encryption (AES-256)
+- [ ] CI/CD with GitHub Actions
+- [ ] Automated testing suite
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+### Development Guidelines
+
+- Follow PEP 8 style guide
+- Write unit tests for new features
+- Update documentation as needed
+- Keep commits atomic and descriptive
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 👨‍💻 Author
+
+<div align="center">
+
+**Girish InTech**
+
+[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/GirishInTech)
+[![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:girish.techin@gmail.com)
+
+</div>
+
+---
+
+## 🙏 Acknowledgments
+
+- Django Community
+- Google Cloud Platform
+- All contributors and supporters
+
+---
+
+<div align="center">
+
+**⭐ Star this repo if you find it helpful!**
+
+Made with ❤️ by [Girish InTech](https://github.com/GirishInTech)
+
+</div>
