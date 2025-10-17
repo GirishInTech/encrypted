@@ -1,0 +1,308 @@
+Nice — I read everything above and made a compact, **powerful checklist file** with the exact commands you ran (cleaned-up, PowerShell-safe), in the correct order, and a **short one-line note** under each command explaining why it was run.
+
+> ⚠️ Sensitive values (DB password, project id, bucket name, service-account email, image tag, Cloud Run URL) are shown as placeholders where appropriate — replace them with your real values (or keep the exact ones you used).
+> Use this from your project root (`D:\Girish\encrypted hosting\video_hosting`) in PowerShell (run as normal user).
+
+---
+
+# Quick Runbook — commands in order (PowerShell-safe)
+
+Copy–paste the sections you need. Keep it short & accurate.
+
+---
+
+## 0 — Local prerequisites (once)
+
+```powershell
+# login & select project
+gcloud auth login
+gcloud config set project IMAGE_GEN_PROJECT_ID
+```
+
+*Why:* Authenticates gcloud and sets the active project.
+
+---
+
+## 1 — Enable APIs you need (once per project)
+
+```powershell
+gcloud services enable sqladmin.googleapis.com run.googleapis.com artifactregistry.googleapis.com storage.googleapis.com
+```
+
+*Why:* Enables Cloud SQL, Cloud Run, Artifact Registry and Cloud Storage APIs used throughout.
+
+---
+
+## 2 — Create Cloud SQL (Postgres) instance
+
+```powershell
+gcloud sql instances create video-db `
+  --database-version=POSTGRES_15 `
+  --tier=db-f1-micro `
+  --region=asia-south1 `
+  --root-password="YOUR_DB_ROOT_PASSWORD"
+```
+
+*Why:* Create a managed Postgres instance for your Django DB.
+
+---
+
+## 3 — Create GCS bucket for media
+
+```powershell
+gcloud storage buckets create "gs://video-hosting-media-bucket-GUID" --project="IMAGE_GEN_PROJECT_ID" --location="asia-south1" --uniform-bucket-level-access
+```
+
+*Why:* Store videos & thumbnails in Cloud Storage (uniform access recommended).
+
+---
+
+## 4 — Create a service account for Cloud Run to use (media access)
+
+```powershell
+gcloud iam service-accounts create media-storage-sa --display-name "Media Storage Service Account"
+```
+
+*Why:* Use a service account instead of embedding key.json in prod.
+
+---
+
+## 5 — Grant IAM roles to service account
+
+```powershell
+gcloud projects add-iam-policy-binding IMAGE_GEN_PROJECT_ID --member="serviceAccount:media-storage-sa@IMAGE_GEN_PROJECT_ID.iam.gserviceaccount.com" --role="roles/cloudsql.client"
+
+gcloud projects add-iam-policy-binding IMAGE_GEN_PROJECT_ID --member="serviceAccount:media-storage-sa@IMAGE_GEN_PROJECT_ID.iam.gserviceaccount.com" --role="roles/storage.objectAdmin"
+```
+
+*Why:* Allow the service account to connect to Cloud SQL and manage objects in your bucket.
+
+---
+
+## 6 — (Optional) Create JSON key locally for testing only
+
+```powershell
+gcloud iam service-accounts keys create key.json --iam-account="media-storage-sa@IMAGE_GEN_PROJECT_ID.iam.gserviceaccount.com"
+```
+
+*Why:* Useful for local Docker runs. **Do not** bake key.json into production images.
+
+---
+
+## 7 — Start Cloud SQL Proxy (local testing) — make it reachable by Docker
+
+Run in a separate terminal and keep it open:
+
+```powershell
+.\cloud-sql-proxy.x64.exe IMAGE_GEN_PROJECT_ID:asia-south1:video-db --address 0.0.0.0 --port 5432
+```
+
+*Why:* Makes the Cloud SQL instance reachable locally and from Docker; bind to 0.0.0.0 so containers can connect.
+
+---
+
+## 8 — Prepare `.env` (project root) — example
+
+Create `.env` in project root containing:
+
+```env
+DB_NAME=postgres
+DB_USER=postgres
+DB_PASSWORD=YOUR_DB_PASSWORD
+DB_HOST=host.docker.internal
+DB_PORT=5432
+GOOGLE_APPLICATION_CREDENTIALS=/app/key.json
+CLOUD_RUN_SERVICE_URL=video-hosting-service-1068891226958.asia-south1.run.app
+BUCKET_NAME=video-hosting-media-bucket-GUID
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,video-hosting-service-1068891226958.asia-south1.run.app
+```
+
+*Why:* Keep runtime env vars out of the image; Docker can load this with `--env-file` locally.
+
+---
+
+## 9 — Build Docker image (local)
+
+```powershell
+docker build -t video-hosting-app:test .
+```
+
+*Why:* Create local image to test DB + GCS integration.
+
+---
+
+## 10 — Run container locally (mount key.json and load .env)
+
+```powershell
+docker run -p 8080:8080 -v "${PWD}\key.json:/app/key.json" --env-file .env video-hosting-app:test
+```
+
+*Why:* Runs the container locally with service account key and environment variables loaded.
+
+If port already in use:
+
+```powershell
+docker ps
+docker stop <container_id_or_name>
+```
+
+*Why:* Stop old containers that block port 8080.
+
+---
+
+## 11 — Test locally
+
+* Open `http://localhost:8080` and verify DB reads/writes, uploads, deletes (GCS), and playback.
+  *Why:* Confirm everything works before pushing to cloud.
+
+---
+
+## 12 — Create Artifact Registry (once)
+
+```powershell
+gcloud artifacts repositories create video-hosting-repo --repository-format=docker --location=asia-south1 --description="Container repo for video hosting app"
+gcloud auth configure-docker asia-south1-docker.pkg.dev
+```
+
+*Why:* Create a repo to push your image and configure Docker auth to push.
+
+---
+
+## 13 — Tag & push the image to Artifact Registry
+
+```powershell
+docker tag video-hosting-app:test asia-south1-docker.pkg.dev/IMAGE_GEN_PROJECT_ID/video-hosting-repo/video-hosting-app:latest
+docker push asia-south1-docker.pkg.dev/IMAGE_GEN_PROJECT_ID/video-hosting-repo/video-hosting-app:latest
+```
+
+*Why:* Upload built image to Google container registry for Cloud Run to pull.
+
+---
+
+## 14 — Update Dockerfile to be Cloud Run friendly
+
+Make sure your Dockerfile CMD uses `${PORT}` and runs checks, e.g.:
+
+```dockerfile
+CMD ["sh", "-c", "python manage.py check && gunicorn video_hosting.wsgi:application --bind 0.0.0.0:${PORT} --timeout 120"]
+```
+
+*Why:* Cloud Run provides `$PORT` at runtime; use it instead of a hardcoded port. Increase timeout to avoid worker timeouts.
+
+---
+
+## 15 — Deploy to Cloud Run (PowerShell-safe)
+
+**Important:** include `--add-cloudsql-instances` and `--service-account` so Cloud Run mounts the Cloud SQL socket and uses IAM creds.
+
+```powershell
+gcloud run deploy video-hosting-service `
+  --image=asia-south1-docker.pkg.dev/IMAGE_GEN_PROJECT_ID/video-hosting-repo/video-hosting-app:latest `
+  --region=asia-south1 `
+  --allow-unauthenticated `
+  --add-cloudsql-instances=IMAGE_GEN_PROJECT_ID:asia-south1:video-db `
+  --service-account=media-storage-sa@IMAGE_GEN_PROJECT_ID.iam.gserviceaccount.com `
+  --set-env-vars "DB_HOST=/cloudsql/IMAGE_GEN_PROJECT_ID:asia-south1:video-db,DB_NAME=postgres,DB_USER=postgres,DB_PASSWORD=YOUR_DB_PASSWORD,BUCKET_NAME=video-hosting-media-bucket-GUID,CLOUD_RUN_SERVICE_URL=video-hosting-service-1068891226958.asia-south1.run.app"
+```
+
+*Why:* Deploy the container to Cloud Run, attach Cloud SQL, set runtime env vars, and run under the service account (no key.json needed in production).
+
+---
+
+## 16 — (Optional) Update service account on an existing service
+
+If you deployed earlier without `--service-account`, update it:
+
+```powershell
+gcloud run services update video-hosting-service `
+  --region=asia-south1 `
+  --service-account=media-storage-sa@IMAGE_GEN_PROJECT_ID.iam.gserviceaccount.com
+```
+
+*Why:* Ensure Cloud Run runs as that SA.
+
+---
+
+## 17 — Verify the deployed service & logs
+
+```powershell
+# Get Service URL
+gcloud run services describe video-hosting-service --region=asia-south1 --format="value(status.url)"
+
+# Read logs (if something failed)
+gcloud logs read --project=IMAGE_GEN_PROJECT_ID --service=video-hosting-service --limit=50
+```
+
+*Why:* Confirm service is up and inspect logs if errors occur.
+
+---
+
+## 18 — Add CSRF trusted origin (if needed) — two ways
+
+**Option A — quick edit in settings.py** (if you prefer code change):
+
+```python
+CSRF_TRUSTED_ORIGINS = ["https://video-hosting-service-1068891226958.asia-south1.run.app"]
+```
+
+*Why:* Trusts Cloud Run domain for Django CSRF checks.
+
+**Option B — dynamic (recommended)**
+Add to `settings.py`:
+
+```python
+import os
+cloud_run_url = os.getenv("CLOUD_RUN_SERVICE_URL")
+CSRF_TRUSTED_ORIGINS = [f"https://{cloud_run_url}"] if cloud_run_url else []
+```
+
+Then pass `CLOUD_RUN_SERVICE_URL` in `--set-env-vars` when you deploy (see step 15).
+*Why:* No code changes required for future redeploys / region changes.
+
+---
+
+## 19 — Useful local troubleshooting commands
+
+```powershell
+# show running containers
+docker ps
+
+# stop a container
+docker stop <container_id>
+
+# inspect container logs
+docker logs <container_id>
+
+# check SQL proxy status (local)
+# run in the terminal where you launched it — it prints accepted connections
+```
+
+*Why:* Common debugging helpers.
+
+---
+
+## 20 — Security notes (short)
+
+* Never commit `key.json` or `.env` to git. Add them to `.gitignore`.
+* In production, prefer IAM service accounts (we used `media-storage-sa`) to JSON keys.
+* Replace placeholder secrets with secure secret manager or Cloud Run env vars.
+
+---
+
+## Final small checklist (before every production deploy)
+
+1. `docker build -t ...`
+2. `docker tag ...`
+3. `docker push ...`
+4. `gcloud run deploy ... --add-cloudsql-instances=... --service-account=... --set-env-vars "..."`
+5. Test the public URL.
+
+---
+
+If you want, I can now:
+
+* produce a one-file `deploy.sh` / `deploy.ps1` (PowerShell) with these commands (safely parameterized), **or**
+* generate a minimal `README.md` using the above (clean, copy/paste), or
+* show exact edits to `settings.py` for `CSRF_TRUSTED_ORIGINS`, `STATIC_ROOT`, `DATABASES` env reading.
+
+Which one shall I make next?

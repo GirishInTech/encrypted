@@ -1,0 +1,75 @@
+# -------------------------------
+# 🐍 Python & Virtual Environment
+# -------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+*.egg
+build/
+dist/
+downloads/
+.eggs/
+wheels/
+lib/
+lib64/
+parts/
+sdist/
+var/
+
+# -------------------------------
+# ⚙️ Django
+# -------------------------------
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Static & Media (generated content)
+media/
+videos/
+staticfiles/
+static/
+
+# -------------------------------
+# ☁️ Google Cloud & Credentials
+# -------------------------------
+key.json
+*.key.json
+*.pem
+*.p12
+.env
+cloud-sql-proxy.x64.exe
+
+# -------------------------------
+# 🐳 Docker
+# -------------------------------
+*.pid
+*.seed
+*.bak
+Dockerfile*
+docker-compose*.yml
+*.tar
+*.tgz
+*.log
+
+# -------------------------------
+# 🧠 IDE & Editor Config
+# -------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.iml
+
+# -------------------------------
+# 💻 OS-specific
+# -------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
