@@ -78,12 +78,12 @@
 - [Database Setup](#-database-setup)
 - [Storage Configuration](#-storage-configuration)
 - [Cloud Run Deployment](#-cloud-run-deployment)
-- [Testing](#-testing--troubleshooting)
+- [Testing & Troubleshooting](#-testing--troubleshooting)
 - [Mobile Optimization](#-mobile-optimization)
-- [Security](#-security-best-practices)
+- [Security Best Practices](#-security-best-practices)
 - [Roadmap](#-roadmap)
 - [Contributing](#-contributing)
-- [License](#-license)
+- [Author](#-author)
 
 ---
 
@@ -226,13 +226,13 @@ encrypted/
 
 ## 💻 Local Development
 
-### 1. Environment Configuration
+### Environment Configuration
 
 Create a `.env` file in the project root:
 
 ```env
 # Django Settings
-SECRET_KEY=your-secret-key-here
+SECRET_KEY=<YOUR_SECRET_KEY>
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 
@@ -241,25 +241,25 @@ DB_HOST=127.0.0.1
 DB_PORT=5432
 DB_NAME=video_hosting_db
 DB_USER=postgres
-DB_PASSWORD=your-password
+DB_PASSWORD=<YOUR_DB_PASSWORD>
 
 # Google Cloud Storage
-BUCKET_NAME=your-bucket-name
+BUCKET_NAME=<YOUR_BUCKET_NAME>
 GOOGLE_APPLICATION_CREDENTIALS=key.json
 
 # Security
 CSRF_TRUSTED_ORIGINS=http://localhost:8000
 ```
 
-### 2. Start Cloud SQL Proxy (Optional for local GCP connection)
+### Start Cloud SQL Proxy (Optional)
 
 ```bash
-cloud-sql-proxy.x64.exe image-gen-demo-epsilon:asia-south1:video-db \
+cloud-sql-proxy <PROJECT_ID>:<REGION>:<INSTANCE_NAME> \
   --address 0.0.0.0 \
   --port 5432
 ```
 
-### 3. Run System Health Checks
+### Run System Health Checks
 
 ```bash
 python video_hosting/check_connections.py
@@ -292,7 +292,7 @@ docker run -p 8080:8080 \
   video-hosting-app:latest
 ```
 
-### Docker Compose (Recommended for Local Development)
+### Docker Compose (Recommended)
 
 ```bash
 docker-compose up --build
@@ -304,7 +304,7 @@ Access the application at `http://localhost:8080`
 
 ## ☁️ Google Cloud Configuration
 
-### 1. Enable Required APIs
+### 1️⃣ Enable Required APIs
 
 ```bash
 gcloud services enable \
@@ -314,32 +314,38 @@ gcloud services enable \
   artifactregistry.googleapis.com
 ```
 
-### 2. Create Artifact Registry Repository
+### 2️⃣ Create Artifact Registry
 
 ```bash
 gcloud artifacts repositories create video-hosting-repo \
   --repository-format=docker \
-  --location=asia-south1 \
+  --location=<REGION> \
   --description="Container repository for video hosting application"
 ```
 
-### 3. Configure Docker Authentication
+> 💡 **Tip:** Replace `<REGION>` with your preferred region (e.g., `us-central1`, `asia-south1`, `europe-west1`)
+
+### 3️⃣ Configure Docker Authentication
 
 ```bash
-gcloud auth configure-docker asia-south1-docker.pkg.dev
+gcloud auth configure-docker <REGION>-docker.pkg.dev
 ```
 
-### 4. Build and Push Image
+### 4️⃣ Build and Push Image
 
 ```bash
 # Tag the image
 docker tag video-hosting-app:latest \
-  asia-south1-docker.pkg.dev/image-gen-demo-epsilon/video-hosting-repo/video-hosting-app:latest
+  <REGION>-docker.pkg.dev/<PROJECT_ID>/video-hosting-repo/video-hosting-app:latest
 
 # Push to Artifact Registry
 docker push \
-  asia-south1-docker.pkg.dev/image-gen-demo-epsilon/video-hosting-repo/video-hosting-app:latest
+  <REGION>-docker.pkg.dev/<PROJECT_ID>/video-hosting-repo/video-hosting-app:latest
 ```
+
+> 🔑 **Replace placeholders:**
+> - `<REGION>` - Your GCP region
+> - `<PROJECT_ID>` - Your GCP project ID
 
 ---
 
@@ -347,27 +353,29 @@ docker push \
 
 ### Cloud SQL Configuration
 
-**Instance Details:**
-- **Instance ID:** `video-db`
-- **Database:** `postgres`
-- **User:** `postgres`
-- **Region:** `asia-south1`
-- **Connection:** Unix socket via Cloud SQL Proxy
-
-### Environment Variables
+**Environment Variables:**
 
 ```env
-DB_HOST=/cloudsql/image-gen-demo-epsilon:asia-south1:video-db
+DB_HOST=/cloudsql/<PROJECT_ID>:<REGION>:<INSTANCE_NAME>
 DB_NAME=postgres
 DB_USER=postgres
-DB_PASSWORD=your-secure-password
+DB_PASSWORD=<YOUR_DB_PASSWORD>
 ```
 
-### Run Migrations on Cloud SQL
+### Create Cloud SQL Instance (if needed)
+
+```bash
+gcloud sql instances create <INSTANCE_NAME> \
+  --database-version=POSTGRES_14 \
+  --tier=db-f1-micro \
+  --region=<REGION>
+```
+
+### Run Migrations
 
 ```bash
 # Connect via Cloud SQL Proxy
-cloud-sql-proxy image-gen-demo-epsilon:asia-south1:video-db
+cloud-sql-proxy <PROJECT_ID>:<REGION>:<INSTANCE_NAME>
 
 # In another terminal
 python manage.py migrate
@@ -378,43 +386,43 @@ python manage.py createsuperuser
 
 ## 📦 Storage Configuration
 
-### Create GCS Bucket
+### 1️⃣ Create GCS Bucket
 
 ```bash
-gcloud storage buckets create gs://video-hosting-media-bucket-girish \
-  --location=asia-south1 \
+gcloud storage buckets create gs://<YOUR_BUCKET_NAME> \
+  --location=<REGION> \
   --uniform-bucket-level-access
 ```
 
-### Create Service Account
+### 2️⃣ Create Service Account
 
 ```bash
 gcloud iam service-accounts create media-storage-sa \
   --display-name="Media Storage Service Account"
 ```
 
-### Assign Permissions
+### 3️⃣ Assign Permissions
 
 ```bash
 # Storage Admin
-gcloud projects add-iam-policy-binding image-gen-demo-epsilon \
-  --member="serviceAccount:media-storage-sa@image-gen-demo-epsilon.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding <PROJECT_ID> \
+  --member="serviceAccount:media-storage-sa@<PROJECT_ID>.iam.gserviceaccount.com" \
   --role="roles/storage.objectAdmin"
 
 # Cloud SQL Client
-gcloud projects add-iam-policy-binding image-gen-demo-epsilon \
-  --member="serviceAccount:media-storage-sa@image-gen-demo-epsilon.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding <PROJECT_ID> \
+  --member="serviceAccount:media-storage-sa@<PROJECT_ID>.iam.gserviceaccount.com" \
   --role="roles/cloudsql.client"
 ```
 
-### Generate Service Account Key
+### 4️⃣ Generate Service Account Key
 
 ```bash
 gcloud iam service-accounts keys create key.json \
-  --iam-account=media-storage-sa@image-gen-demo-epsilon.iam.gserviceaccount.com
+  --iam-account=media-storage-sa@<PROJECT_ID>.iam.gserviceaccount.com
 ```
 
-> ⚠️ **Security Note:** Never commit `key.json` to version control!
+> ⚠️ **Security Note:** Never commit `key.json` to version control! Add it to `.gitignore`
 
 ---
 
@@ -424,13 +432,13 @@ gcloud iam service-accounts keys create key.json \
 
 ```bash
 gcloud run deploy video-hosting-service \
-  --image=asia-south1-docker.pkg.dev/image-gen-demo-epsilon/video-hosting-repo/video-hosting-app:latest \
-  --region=asia-south1 \
+  --image=<REGION>-docker.pkg.dev/<PROJECT_ID>/video-hosting-repo/video-hosting-app:latest \
+  --region=<REGION> \
   --platform=managed \
   --allow-unauthenticated \
-  --add-cloudsql-instances=image-gen-demo-epsilon:asia-south1:video-db \
-  --service-account=media-storage-sa@image-gen-demo-epsilon.iam.gserviceaccount.com \
-  --set-env-vars="DB_HOST=/cloudsql/image-gen-demo-epsilon:asia-south1:video-db,DB_NAME=postgres,DB_USER=postgres,DB_PASSWORD=your-password,BUCKET_NAME=video-hosting-media-bucket-girish,SECRET_KEY=your-secret-key" \
+  --add-cloudsql-instances=<PROJECT_ID>:<REGION>:<INSTANCE_NAME> \
+  --service-account=media-storage-sa@<PROJECT_ID>.iam.gserviceaccount.com \
+  --set-env-vars="DB_HOST=/cloudsql/<PROJECT_ID>:<REGION>:<INSTANCE_NAME>,DB_NAME=postgres,DB_USER=postgres,DB_PASSWORD=<YOUR_DB_PASSWORD>,BUCKET_NAME=<YOUR_BUCKET_NAME>,SECRET_KEY=<YOUR_SECRET_KEY>" \
   --memory=512Mi \
   --cpu=1 \
   --timeout=300 \
@@ -443,11 +451,17 @@ After deployment, update `settings.py`:
 
 ```python
 CSRF_TRUSTED_ORIGINS = [
-    'https://video-hosting-service-1068891226958.asia-south1.run.app'
+    'https://<your-service-name>.run.app'
 ]
 ```
 
-Redeploy with the updated settings.
+Then redeploy:
+
+```bash
+docker build -t video-hosting-app:latest .
+docker push <REGION>-docker.pkg.dev/<PROJECT_ID>/video-hosting-repo/video-hosting-app:latest
+gcloud run deploy video-hosting-service --image=<REGION>-docker.pkg.dev/<PROJECT_ID>/video-hosting-repo/video-hosting-app:latest
+```
 
 ---
 
@@ -456,7 +470,7 @@ Redeploy with the updated settings.
 ### Health Check Endpoint
 
 ```bash
-curl https://your-cloud-run-url.run.app/health/
+curl https://<your-service-name>.run.app/health/
 ```
 
 Expected response:
@@ -471,47 +485,52 @@ Expected response:
 ### Common Issues
 
 <details>
-<summary><b>CSRF Verification Failed</b></summary>
+<summary><b>🔴 CSRF Verification Failed</b></summary>
 
 **Solution:** Add your Cloud Run URL to `CSRF_TRUSTED_ORIGINS` in `settings.py`:
 
 ```python
 CSRF_TRUSTED_ORIGINS = [
-    'https://your-service-name.run.app'
+    'https://<your-service-name>.run.app'
 ]
 ```
 </details>
 
 <details>
-<summary><b>Database Connection Error</b></summary>
+<summary><b>🔴 Database Connection Error</b></summary>
 
-**Solution:** Verify Cloud SQL connection string and ensure Cloud SQL Admin API is enabled:
+**Solution:** Verify Cloud SQL connection string format:
 
+```env
+DB_HOST=/cloudsql/<PROJECT_ID>:<REGION>:<INSTANCE_NAME>
+```
+
+Ensure Cloud SQL Admin API is enabled:
 ```bash
 gcloud services enable sqladmin.googleapis.com
 ```
 </details>
 
 <details>
-<summary><b>GCS Upload Failure</b></summary>
+<summary><b>🔴 GCS Upload Failure</b></summary>
 
 **Solution:** Check service account permissions:
 
 ```bash
-gcloud storage buckets add-iam-policy-binding gs://your-bucket \
-  --member="serviceAccount:your-sa@project.iam.gserviceaccount.com" \
+gcloud storage buckets add-iam-policy-binding gs://<YOUR_BUCKET_NAME> \
+  --member="serviceAccount:media-storage-sa@<PROJECT_ID>.iam.gserviceaccount.com" \
   --role="roles/storage.objectAdmin"
 ```
 </details>
 
 <details>
-<summary><b>Container Won't Start</b></summary>
+<summary><b>🔴 Container Won't Start</b></summary>
 
-**Solution:** Check logs:
+**Solution:** Check Cloud Run logs:
 
 ```bash
 gcloud run services logs read video-hosting-service \
-  --region=asia-south1 \
+  --region=<REGION> \
   --limit=50
 ```
 </details>
@@ -532,15 +551,14 @@ gcloud run services logs read video-hosting-service \
 ### Testing
 
 ```bash
-# Test on various viewports
-python manage.py test --settings=video_hosting.test_settings
+python manage.py test
 ```
 
 ---
 
 ## 🔒 Security Best Practices
 
-### Implemented
+### Implemented Security Features
 
 - [x] Password-protected video access
 - [x] CSRF token validation
@@ -550,17 +568,30 @@ python manage.py test --settings=video_hosting.test_settings
 - [x] HTTPS enforcement (Cloud Run)
 - [x] SQL injection protection (Django ORM)
 
-### Recommendations
+### Production Security Settings
+
+Add to `settings.py` for production:
 
 ```python
-# settings.py - Production Security
+# Security Settings
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
 ```
+
+### Environment Variables Checklist
+
+- [ ] `SECRET_KEY` - Strong random string
+- [ ] `DB_PASSWORD` - Complex database password
+- [ ] `BUCKET_NAME` - Private bucket name
+- [ ] `key.json` - Never committed to Git
+- [ ] All sensitive data in `.env` file
 
 ---
 
@@ -585,6 +616,8 @@ X_FRAME_OPTIONS = 'DENY'
 - [ ] Advanced encryption (AES-256)
 - [ ] CI/CD with GitHub Actions
 - [ ] Automated testing suite
+- [ ] Video thumbnails generation
+- [ ] Subtitle support
 
 ---
 
@@ -617,10 +650,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**Girish InTech**
+### **Girish InTech**
 
 [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/GirishInTech)
 [![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:girish.techin@gmail.com)
+
+*Building secure, scalable cloud solutions* ☁️
 
 </div>
 
@@ -639,5 +674,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **⭐ Star this repo if you find it helpful!**
 
 Made with ❤️ by [Girish InTech](https://github.com/GirishInTech)
+
+![Views](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FGirishInTech%2Fencrypted&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=Views&edge_flat=false)
 
 </div>
